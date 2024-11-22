@@ -316,47 +316,47 @@ export function ConsolePage() {
 
     const knowledgeBase = [
       "When the patient reports feeling breathless -> Position them upright or slightly forward and encourage pursed-lip breathing - inhale through nose and exhale slowly through pursed lips",
-      
+
       "When patient is breathless and appears anxious or panicked -> Help them stay calm through reassurance and guided breathing. Panic can worsen breathing difficulties",
-      
+
       "When patient is having difficulty breathing while lying down -> Use pillows to prop them up in elevated position. This positioning can make breathing easier",
-      
+
       "If you observe rapid breathing, bluish lips/fingertips, confusion, or extreme fatigue -> Contact healthcare providers immediately as these are signs of severe respiratory distress",
-      
+
       "When planning daily activities with the patient -> Schedule regular rest periods between tasks and avoid rushing. Break activities into smaller, manageable steps",
-      
+
       "If the patient is interested in exercise -> Start with very light activity only if approved by doctor. Monitor breathing during exercise",
-      
+
       "During episodes of breathlessness -> Note when they occur and what seems to trigger or relieve them to identify patterns",
-      
+
       "When setting up the patient's environment -> Keep medications like inhalers within easy reach. Ensure room is well-ventilated and cool",
-      
+
       "If breathlessness occurs during hot or humid weather -> Use air conditioning or fans to improve air circulation and comfort",
-      
+
       "When planning meals -> Offer small, frequent meals rather than large ones to avoid pressing on the diaphragm",
-      
+
       "If breathlessness suddenly worsens or is accompanied by chest pain -> Contact healthcare providers immediately",
-      
+
       "When oxygen therapy is prescribed -> Ensure proper understanding of equipment use and maintenance before starting",
-      
+
       "When maintaining the living space -> Keep area free from dust, strong smells, and irritants that could trigger breathing difficulties",
-      
+
       "If caregiver or patient needs additional support -> Consider joining support groups for advice and emotional support",
-      
+
       "When monitoring symptoms -> Maintain clear communication with healthcare team about any changes in breathing patterns",
-      
+
       "When starting new medications -> Monitor carefully for drowsiness or other side effects that could affect breathing"
     ];
-    
+
     // Calculate Levenshtein distance between two strings
     function levenshteinDistance(str1: string, str2: string) {
       const m = str1.length;
       const n = str2.length;
       const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-    
+
       for (let i = 0; i <= m; i++) dp[i][0] = i;
       for (let j = 0; j <= n; j++) dp[0][j] = j;
-    
+
       for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
           if (str1[i - 1] === str2[j - 1]) {
@@ -372,7 +372,7 @@ export function ConsolePage() {
       }
       return dp[m][n];
     }
-    
+
     // Check if a word approximately matches any word in the target string
     function fuzzyWordMatch(searchWord: string, targetString: string, threshold = 0.7) {
       const targetWords = targetString.toLowerCase().split(/\s+/);
@@ -383,14 +383,14 @@ export function ConsolePage() {
         return similarity >= threshold;
       });
     }
-    
+
     client.addTool(
       {
         name: 'search_caregiver_action_recommender',
         description:
           'Search for recommended actions based on criteria for patient caregiving. Must be called for decision-making purposes.',
         parameters: {
-          type: 'object', 
+          type: 'object',
           properties: {
             search_term: {
               type: 'string',
@@ -402,20 +402,20 @@ export function ConsolePage() {
       },
       async ({ search_term }: { search_term: string }) => {
         const searchTerms = search_term.toLowerCase().split(/\s+/);
-        const results = knowledgeBase.filter(item => 
+        const results = knowledgeBase.filter(item =>
           searchTerms.some(term => fuzzyWordMatch(term, item))
         );
-    
+
         if (results.length === 0) {
           return "No relevant information found.";
         }
-    
+
         // Sort results by relevance (number of matching terms)
         const scoredResults = results.map(item => ({
           text: item,
           score: searchTerms.filter(term => fuzzyWordMatch(term, item)).length
         }));
-    
+
         scoredResults.sort((a, b) => b.score - a.score);
         return scoredResults.map(result => result.text).join('\n');
       }
@@ -555,9 +555,9 @@ export function ConsolePage() {
         item.formatted.file = wavFile;
 
         console.log(items);
-        if (items.length > 10) {
+        if (items.length > 8) {
           console.log(updatedInstructions);
-          updatedInstructions = "Reply me in Chinese. The solution and recommendation based on the patient's profile. \n\n";
+          updatedInstructions = "Speak faster. Now you are a medical expert professional who based on the knowledge and discovery answers you know and collected, give me a solution and recommendation what I should do now as a caregiver. \n\n";
           client.updateSession({ instructions: updatedInstructions });
         }
       }
@@ -585,6 +585,9 @@ export function ConsolePage() {
         </div>
       </div>
       <div className="content-main">
+        <div>
+          <img src="assistant.gif" alt="Description of GIF" />
+        </div>
         <div className="content-logs">
           <div className="content-block conversation">
             <div className="content-block-title">conversation</div>
