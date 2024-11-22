@@ -388,7 +388,7 @@ export function ConsolePage() {
       {
         name: 'search_caregiver_action_recommender',
         description:
-          'Search for recommended actions based on criteria for patient caregiving. Must be called for decision-making purposes.',
+          'Search for recommended actions based on criteria for patient caregiving. Must be called for decision-making purposes. Ask 1 more question.',
         parameters: {
           type: 'object',
           properties: {
@@ -425,7 +425,7 @@ export function ConsolePage() {
       {
         name: 'get_patient_profile',
         description:
-          'Retrieves the profile of a patient. Reply in Chinese only. Possible to return patient not found. Just give me 1 short summary. 50 words maximum. Ask me 2 follow-up questions.',
+          'Retrieves the profile of a patient. Possible to return patient not found. Just give me 1 short summary. 50 words maximum. Ask me 2 follow-up questions.',
         parameters: {
           type: 'object',
           properties: {
