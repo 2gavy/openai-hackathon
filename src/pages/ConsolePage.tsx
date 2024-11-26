@@ -6,13 +6,14 @@ const { OpenAI } = require("openai");
 
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_medical.js';
-//import { instructions2 } from '../utils/conversation_medical2.js';
 
-import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
-import { Button } from '../components/button/Button';
+import { X } from 'react-feather';
+import { WavRenderer } from '../utils/wav_renderer';
 
 import './ConsolePage.scss';
-import { isJsxOpeningLikeElement } from 'typescript';
+import CallingScreenInIPhoneX from './CallingScreenInIPhoneX';
+import CallComponent from './CallComponent';
+import FinalReport from './FinalReport';
 
 /**
  * Type for result from get_weather() function call
@@ -159,8 +160,7 @@ export function ConsolePage() {
     client.sendUserMessageContent([
       {
         type: `input_text`,
-        text: `Hello!`,
-        // text: `For testing purposes, I want you to list ten car brands. Number each item, e.g. "one (or whatever number you are one): the item name".`
+        text: `Hello! I'm your caregiver assistant, how can I help you today? Please tell me the patient you are caring for.`,
       },
     ]);
 
@@ -177,10 +177,6 @@ export function ConsolePage() {
     setRealtimeEvents([]);
     setItems([]);
     setMemoryKv({});
-    setCoords({
-      lat: 37.775593,
-      lng: -122.418137,
-    });
     setMarker(null);
 
     const client = clientRef.current;
@@ -226,33 +222,91 @@ export function ConsolePage() {
     client.createResponse();
   };
 
-  /**
-   * Auto-scroll the event logs
-   */
-  // useEffect(() => {
-  //   if (eventsScrollRef.current) {
-  //     const eventsEl = eventsScrollRef.current;
-  //     const scrollHeight = eventsEl.scrollHeight;
-  //     // Only scroll if height has just changed
-  //     if (scrollHeight !== eventsScrollHeightRef.current) {
-  //       eventsEl.scrollTop = scrollHeight;
-  //       eventsScrollHeightRef.current = scrollHeight;
-  //     }
-  //   }
-  // }, [realtimeEvents]);
-
+  const conversationRef = useRef(null);
   /**
    * Auto-scroll the conversation logs
    */
-  // useEffect(() => {
-  //   const conversationEls = [].slice.call(
-  //     document.body.querySelectorAll('[data-conversation-content]')
-  //   );
-  //   for (const el of conversationEls) {
-  //     const conversationEl = el as HTMLDivElement;
-  //     conversationEl.scrollTop = conversationEl.scrollHeight;
-  //   }
-  // }, [items]);
+  useEffect(() => {
+    // Function to scroll to the bottom
+    const scrollToBottom = () => {
+      if (conversationRef.current) {
+        (conversationRef.current as HTMLDivElement).scrollTop = (conversationRef.current as HTMLDivElement).scrollHeight;
+      }
+    };
+
+    // Using requestAnimationFrame to ensure scroll happens after the DOM is updated
+    requestAnimationFrame(scrollToBottom);
+  }, [items]); // Runs when items change
+
+  /**
+ * Set up render loops for the visualization canvas
+ */
+  useEffect(() => {
+    let isLoaded = true;
+
+    const wavRecorder = wavRecorderRef.current;
+    const clientCanvas = clientCanvasRef.current;
+    let clientCtx: CanvasRenderingContext2D | null = null;
+
+    const wavStreamPlayer = wavStreamPlayerRef.current;
+    const serverCanvas = serverCanvasRef.current;
+    let serverCtx: CanvasRenderingContext2D | null = null;
+
+    const render = () => {
+      if (isLoaded) {
+        if (clientCanvas) {
+          if (!clientCanvas.width || !clientCanvas.height) {
+            clientCanvas.width = clientCanvas.offsetWidth;
+            clientCanvas.height = clientCanvas.offsetHeight;
+          }
+          clientCtx = clientCtx || clientCanvas.getContext('2d');
+          if (clientCtx) {
+            clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
+            const result = wavRecorder.recording
+              ? wavRecorder.getFrequencies('voice')
+              : { values: new Float32Array([0]) };
+            WavRenderer.drawBars(
+              clientCanvas,
+              clientCtx,
+              result.values,
+              '#0099ff',
+              10,
+              0,
+              8
+            );
+          }
+        }
+        if (serverCanvas) {
+          if (!serverCanvas.width || !serverCanvas.height) {
+            serverCanvas.width = serverCanvas.offsetWidth;
+            serverCanvas.height = serverCanvas.offsetHeight;
+          }
+          serverCtx = serverCtx || serverCanvas.getContext('2d');
+          if (serverCtx) {
+            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
+            const result = wavStreamPlayer.analyser
+              ? wavStreamPlayer.getFrequencies('voice')
+              : { values: new Float32Array([0]) };
+            WavRenderer.drawBars(
+              serverCanvas,
+              serverCtx,
+              result.values,
+              '#009900',
+              10,
+              0,
+              8
+            );
+          }
+        }
+        window.requestAnimationFrame(render);
+      }
+    };
+    render();
+
+    return () => {
+      isLoaded = false;
+    };
+  }, []);
 
   /**
    * Core RealtimeClient and audio capture setup
@@ -373,6 +427,8 @@ export function ConsolePage() {
       return dp[m][n];
     }
 
+
+
     // Check if a word approximately matches any word in the target string
     function fuzzyWordMatch(searchWord: string, targetString: string, threshold = 0.7) {
       const targetWords = targetString.toLowerCase().split(/\s+/);
@@ -425,7 +481,7 @@ export function ConsolePage() {
       {
         name: 'get_patient_profile',
         description:
-          'Retrieves the profile of a patient. Possible to return patient not found. Just give me 1 short summary. 50 words maximum. Ask me 2 follow-up questions.',
+          'Give me the patient name and summary, maximum 20 words. Ask what\'s wrong with him',
         parameters: {
           type: 'object',
           properties: {
@@ -554,11 +610,11 @@ export function ConsolePage() {
         );
         item.formatted.file = wavFile;
 
-        console.log(items);
-        if (items.length > 8) {
-          console.log(updatedInstructions);
-          updatedInstructions = "Speak faster. Now you are a medical expert professional who based on the knowledge and discovery answers you know and collected, give me a solution and recommendation what I should do now as a caregiver. \n\n";
-          client.updateSession({ instructions: updatedInstructions });
+        console.log(item.formatted.transcript)
+        if (item.formatted.transcript.includes("Patient Name: ")) {
+          console.log(item.formatted.transcript)
+          setReportContent(item.formatted.transcript)
+          disconnectConversation()
         }
       }
 
@@ -573,108 +629,120 @@ export function ConsolePage() {
     };
   }, []);
 
+
+
+  // Function to simulate begin the call
+  const beginCall = async () => {
+    setIsConnected(false);
+    setRealtimeEvents([]);
+    setItems([]);
+    setMemoryKv({});
+    setMarker(null);
+
+    const client = clientRef.current;
+    client.disconnect();
+
+    const wavRecorder = wavRecorderRef.current;
+    await wavRecorder.end();
+
+    const wavStreamPlayer = wavStreamPlayerRef.current;
+    await wavStreamPlayer.interrupt();
+  };
+
+
+
+  const [reportContent, setReportContent] = useState<string>('');
+
   /**
    * Render the application
    */
   return (
     <div data-component="ConsolePage">
-      <div className="content-top">
-        <div className="content-title">
-          <img src="/openai-logomark.svg" />
-          <span>OpenAI Hackathon</span>
-        </div>
-      </div>
-      <div className="content-main">
-        <div>
-          <img src="assistant.gif" alt="Description of GIF" />
-        </div>
-        <div className="content-logs">
-          <div className="content-block conversation">
-            <div className="content-block-title">conversation</div>
-            <div className="content-block-body" data-conversation-content>
-              {!items.length && `awaiting connection...`}
-              {items.map((conversationItem, i) => {
-                return (
-                  <div className="conversation-item" key={conversationItem.id}>
-                    <div className={`speaker ${conversationItem.role || ''}`}>
-                      <div>
-                        {(
-                          conversationItem.role || conversationItem.type
-                        ).replaceAll('_', ' ')}
-                      </div>
-                      <div
-                        className="close"
-                        onClick={() =>
-                          deleteConversationItem(conversationItem.id)
-                        }
-                      >
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`}>
-                      {/* tool response */}
-                      {conversationItem.type === 'function_call_output' && (
-                        <div>{conversationItem.formatted.output}</div>
-                      )}
-                      {/* tool call */}
-                      {!!conversationItem.formatted.tool && (
-                        <div>
-                          {conversationItem.formatted.tool.name}(
-                          {conversationItem.formatted.tool.arguments})
+      <div className="flex flex-col h-screen">
+        <div className="content-main grid grid-cols-4 flex-grow flex-shrink overflow-hidden h-[calc(100vh-64px)]">
+          <div className="col-span-1 bg-gray-100">
+            <div className="flex flex-col h-screen">
+              <div className="content-block events p-5">
+                <div className="visualization flex">
+                  <div className="visualization-entry client flex-1">
+                    <canvas ref={clientCanvasRef} className="w-full h-full" />
+                  </div>
+                  <div className="visualization-entry server flex-1">
+                    <canvas ref={serverCanvasRef} className="w-full h-full" />
+                  </div>
+                </div>
+                <div className="content-block-title text-xl font-bold text-gray-800 mb-4">Events</div>
+                <div className="content-block-body" ref={eventsScrollRef}>
+                  {!realtimeEvents.length && `awaiting connection...`}
+                </div>
+              </div>
+              <div className="content-block conversation p-4">
+                <div className="content-block-title text-xl font-bold text-gray-800">Conversation</div>
+              </div>
+              <div ref={conversationRef} className="content-block conversation overflow-y-auto p-5 mb-14" >
+                {!items.length && `awaiting connection...`}
+                {items.map((conversationItem) => {
+                  return (
+                    <div className="conversation-item" key={conversationItem.id}>
+                      <div className={`speaker ${conversationItem.role || ''}`}>
+                        <div>{(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}</div>
+                        <div
+                          className="close"
+                          onClick={() => deleteConversationItem(conversationItem.id)}
+                        >
+                          <X />
                         </div>
-                      )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'user' && (
+                      </div>
+                      <div className="speaker-content">
+                        {/* Render conversation content here */}
+                        {conversationItem.type === 'function_call_output' && (
+                          <div>{conversationItem.formatted.output}</div>
+                        )}
+                        {!!conversationItem.formatted.tool && (
+                          <div>
+                            {conversationItem.formatted.tool.name}({conversationItem.formatted.tool.arguments})
+                          </div>
+                        )}
+                        {!conversationItem.formatted.tool && conversationItem.role === 'user' && (
                           <div>
                             {conversationItem.formatted.transcript ||
                               (conversationItem.formatted.audio?.length
                                 ? '(awaiting transcript)'
-                                : conversationItem.formatted.text ||
-                                '(item sent)')}
+                                : conversationItem.formatted.text || '(item sent)')}
                           </div>
                         )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'assistant' && (
+                        {!conversationItem.formatted.tool && conversationItem.role === 'assistant' && (
                           <div>
-                            {conversationItem.formatted.transcript ||
-                              conversationItem.formatted.text ||
-                              '(truncated)'}
+                            {conversationItem.formatted.transcript || conversationItem.formatted.text || '(truncated)'}
                           </div>
                         )}
-                      {conversationItem.formatted.file && (
-                        <audio
-                          src={conversationItem.formatted.file.url}
-                          controls
-                        />
-                      )}
+                        {conversationItem.formatted.file && (
+                          <audio src={conversationItem.formatted.file.url} controls />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div className="content-actions">
-            <div className="spacer" />
-            {isConnected && canPushToTalk && (
-              <Button
-                label={isRecording ? 'release to send' : 'push to talk'}
-                buttonStyle={isRecording ? 'alert' : 'regular'}
-                disabled={!isConnected || !canPushToTalk}
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              />
-            )}
-            <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
-            />
+          <div className="col-span-2 bg-gray-300 relative flex justify-center items-center p-2">
+            {/* Calling Screen Content */}
+            <div className="relative z-10">
+              {!isConnected && <CallComponent onButtonClick={connectConversation} />}
+              {isConnected && canPushToTalk && (<CallingScreenInIPhoneX onButtonClick={disconnectConversation} isRecording={isRecording} startRecording={startRecording} stopRecording={stopRecording} />)}
+            </div>
           </div>
+          <div className="col-span-1 bg-gray-100">
+            <div className="content-block conversation p-4">
+              <div className="p-8">
+                <FinalReport reportContent={reportContent} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="fixed bottom-0 left-0 w-full bg-gray-800 text-white p-4 text-center">
+          Built by ZingZai, Wilson, Siu, Hann
         </div>
       </div>
     </div>
