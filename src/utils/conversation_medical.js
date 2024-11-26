@@ -9,7 +9,8 @@ You need to answer this at the end of the day.
 
 Patient Name: 
 Patient ID: 
-Problem:
-Recommendation:
+Internal Knowledge Base Summary: 
+Problem: 
+Recommendation: 
 
 `;

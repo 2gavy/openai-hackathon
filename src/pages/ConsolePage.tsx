@@ -614,7 +614,7 @@ export function ConsolePage() {
         if (item.formatted.transcript.includes("Patient Name: ")) {
           console.log(item.formatted.transcript)
           setReportContent(item.formatted.transcript)
-          disconnectConversation()
+          // disconnectConversation()
         }
       }
 
