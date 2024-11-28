@@ -1,3 +1,6 @@
+# Create a .env
+OPENAI_API_KEY=sk-proj-xxx
+
 # OpenAI Realtime Console
 
 The OpenAI Realtime Console is intended as an inspector and interactive API reference

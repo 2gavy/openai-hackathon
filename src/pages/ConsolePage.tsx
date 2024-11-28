@@ -133,7 +133,9 @@ export function ConsolePage() {
     apiKey: localStorage.getItem('tmp::voice_api_key'), dangerouslyAllowBrowser: true
   });
 
-  /**
+  const testConversation = useCallback(async () => {  }, []);
+
+    /**
    * Connect to conversation:
    * WavRecorder taks speech input, WavStreamPlayer output, client is API client
    */
@@ -322,7 +324,6 @@ export function ConsolePage() {
     // Set transcription, otherwise we don't get user transcriptions back
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
 
-
     // Add Weather
     client.addTool(
       {
@@ -442,9 +443,9 @@ export function ConsolePage() {
 
     client.addTool(
       {
-        name: 'search_caregiver_action_recommender',
+        name: 'enrich_elastic_knowledge_base',
         description:
-          'Search for recommended actions based on criteria for patient caregiving. Must be called for decision-making purposes. Ask 1 more question.',
+          'Do not generate summary! Enrich with Elastic Knowledge Base',
         parameters: {
           type: 'object',
           properties: {
@@ -609,13 +610,12 @@ export function ConsolePage() {
           24000
         );
         item.formatted.file = wavFile;
-
-        console.log(item.formatted.transcript)
-        if (item.formatted.transcript.includes("Patient Name: ")) {
-          console.log(item.formatted.transcript)
-          setReportContent(item.formatted.transcript)
-          // disconnectConversation()
-        }
+        // console.log(item.formatted.transcript)
+        // console.log(items);
+      }
+      if (item.formatted.transcript.includes("Patient Name:")) {
+        setReportContent(item.formatted.transcript)
+        // disconnectConversation()
       }
 
       setItems(items);
@@ -686,10 +686,13 @@ export function ConsolePage() {
                     <div className="conversation-item" key={conversationItem.id}>
                       <div className={`speaker ${conversationItem.role || ''}`}>
                         <div>{(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}</div>
-                        <div
-                          className="close"
-                          onClick={() => deleteConversationItem(conversationItem.id)}
-                        >
+                        {conversationItem.type === 'function_call' && conversationItem.name === 'enrich_elastic_knowledge_base' && (
+                          <ElasticIcon />
+                        )}
+                        {conversationItem.type === 'function_call' && conversationItem.name === 'get_patient_profile' && (
+                          <HospitalIcon />
+                        )}
+                        <div className="close" onClick={() => deleteConversationItem(conversationItem.id)}>
                           <X />
                         </div>
                       </div>
@@ -730,21 +733,97 @@ export function ConsolePage() {
             {/* Calling Screen Content */}
             <div className="relative z-10">
               {!isConnected && <CallComponent onButtonClick={connectConversation} />}
-              {isConnected && canPushToTalk && (<CallingScreenInIPhoneX onButtonClick={disconnectConversation} isRecording={isRecording} startRecording={startRecording} stopRecording={stopRecording} />)}
+              {isConnected && canPushToTalk && (<CallingScreenInIPhoneX onButtonClick={disconnectConversation} isRecording={isRecording} startRecording={startRecording} stopRecording={stopRecording}  reportContent={reportContent}/>)}
             </div>
           </div>
+
           <div className="col-span-1 bg-gray-100">
-            <div className="content-block conversation p-4">
-              <div className="p-8">
-                <FinalReport reportContent={reportContent} />
-              </div>
+            <div className="flex flex-col h-screen">
+              <FinalReport reportContent={reportContent} />
             </div>
           </div>
         </div>
-        <div className="fixed bottom-0 left-0 w-full bg-gray-800 text-white p-4 text-center">
+        {/* <div className="fixed bottom-0 left-0 w-full bg-gray-800 text-white p-4 text-center">
           Built by ZingZai, Wilson, Siu, Hann
-        </div>
+        </div> */}
       </div>
     </div>
   );
 }
+
+const ElasticIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="25"
+    height="25"
+    viewBox="0 0 256 256"
+    preserveAspectRatio="xMinYMin meet"
+  >
+    <path
+      d="M255.96 134.393c0-21.521-13.373-40.117-33.223-47.43a75.239 75.239 0 0 0 1.253-13.791c0-39.909-32.386-72.295-72.295-72.295-23.193 0-44.923 11.074-58.505 30.088-6.686-5.224-14.835-7.94-23.402-7.94-21.104 0-38.446 17.133-38.446 38.446 0 4.597.836 9.194 2.298 13.373C13.582 81.739 0 100.962 0 122.274c0 21.522 13.373 40.327 33.431 47.64-.835 4.388-1.253 8.985-1.253 13.79 0 39.7 32.386 72.087 72.086 72.087 23.402 0 44.924-11.283 58.505-30.088 6.686 5.223 15.044 8.149 23.611 8.149 21.104 0 38.446-17.134 38.446-38.446 0-4.597-.836-9.194-2.298-13.373 19.64-7.104 33.431-26.327 33.431-47.64z"
+      fill="#FFF"
+    />
+    <path
+      d="M100.085 110.364l57.043 26.119 57.669-50.565a64.312 64.312 0 0 0 1.253-12.746c0-35.52-28.834-64.355-64.355-64.355-21.313 0-41.162 10.447-53.072 27.998l-9.612 49.73 11.074 23.82z"
+      fill="#F4BD19"
+    />
+    <path
+      d="M40.953 170.75c-.835 4.179-1.253 8.567-1.253 12.955 0 35.52 29.043 64.564 64.564 64.564 21.522 0 41.372-10.656 53.49-28.208l9.403-49.729-12.746-24.238-57.251-26.118-56.207 50.774z"
+      fill="#3CBEB1"
+    />
+    <path
+      d="M40.536 71.918l39.073 9.194 8.775-44.506c-5.432-4.179-11.91-6.268-18.805-6.268-16.925 0-30.924 13.79-30.924 30.924 0 3.552.627 7.313 1.88 10.656z"
+      fill="#E9478C"
+    />
+    <path
+      d="M37.192 81.32c-17.551 5.642-29.67 22.567-29.67 40.954 0 17.97 11.074 34.059 27.79 40.327l54.953-49.73-10.03-21.52-43.043-10.03z"
+      fill="#2C458F"
+    />
+    <path
+      d="M167.784 219.852c5.432 4.18 11.91 6.478 18.596 6.478 16.925 0 30.924-13.79 30.924-30.924 0-3.761-.627-7.314-1.88-10.657l-39.073-9.193-8.567 44.296z"
+      fill="#95C63D"
+    />
+    <path
+      d="M175.724 165.317l43.043 10.03c17.551-5.85 29.67-22.566 29.67-40.954 0-17.97-11.074-33.849-27.79-40.326l-56.415 49.311 11.492 21.94z"
+      fill="#176655"
+    />
+  </svg>
+);
+
+const OpenaiIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="25"
+    height="25"
+    viewBox="-1 -.1 949.1 959.8"
+  >
+    <path d="M925.8 456.3c10.4 23.2 17 48 19.7 73.3 2.6 25.3 1.3 50.9-4.1 75.8-5.3 24.9-14.5 48.8-27.3 70.8-8.4 14.7-18.3 28.5-29.7 41.2-11.3 12.6-23.9 24-37.6 34-13.8 10-28.5 18.4-44.1 25.3-15.5 6.8-31.7 12-48.3 15.4-7.8 24.2-19.4 47.1-34.4 67.7-14.9 20.6-33 38.7-53.6 53.6-20.6 15-43.4 26.6-67.6 34.4-24.2 7.9-49.5 11.8-75 11.8-16.9.1-33.9-1.7-50.5-5.1-16.5-3.5-32.7-8.8-48.2-15.7s-30.2-15.5-43.9-25.5c-13.6-10-26.2-21.5-37.4-34.2-25 5.4-50.6 6.7-75.9 4.1-25.3-2.7-50.1-9.3-73.4-19.7-23.2-10.3-44.7-24.3-63.6-41.4s-35-37.1-47.7-59.1c-8.5-14.7-15.5-30.2-20.8-46.3s-8.8-32.7-10.6-49.6c-1.8-16.8-1.7-33.8.1-50.7 1.8-16.8 5.5-33.4 10.8-49.5-17-18.9-31-40.4-41.4-63.6-10.3-23.3-17-48-19.6-73.3-2.7-25.3-1.3-50.9 4-75.8s14.5-48.8 27.3-70.8c8.4-14.7 18.3-28.6 29.6-41.2s24-24 37.7-34 28.5-18.5 44-25.3c15.6-6.9 31.8-12 48.4-15.4 7.8-24.3 19.4-47.1 34.3-67.7 15-20.6 33.1-38.7 53.7-53.7 20.6-14.9 43.4-26.5 67.6-34.4 24.2-7.8 49.5-11.8 75-11.7 16.9-.1 33.9 1.6 50.5 5.1s32.8 8.7 48.3 15.6c15.5 7 30.2 15.5 43.9 25.5 13.7 10.1 26.3 21.5 37.5 34.2 24.9-5.3 50.5-6.6 75.8-4s50 9.3 73.3 19.6c23.2 10.4 44.7 24.3 63.6 41.4 18.9 17 35 36.9 47.7 59 8.5 14.6 15.5 30.1 20.8 46.3 5.3 16.1 8.9 32.7 10.6 49.6 1.8 16.9 1.8 33.9-.1 50.8-1.8 16.9-5.5 33.5-10.8 49.6 17.1 18.9 31 40.3 41.4 63.6z" />
+  </svg>
+);
+
+const HospitalIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    xmlnsXlink="http://www.w3.org/1999/xlink"
+    viewBox="0 0 512 512"
+    width="25"
+    height="25"
+    xmlSpace="preserve"
+  >
+    <polygon style={{ fill: '#E4F1FB' }} points="409.6,238.933 409.6,0 102.4,0 102.4,238.933 25.6,238.933 25.6,512 102.4,512 409.6,512 486.4,512 486.4,238.933" />
+    <polygon style={{ fill: '#C9E3F7' }} points="409.6,238.933 409.6,0 256,0 256,512 486.4,512 486.4,238.933" />
+    <polygon style={{ fill: '#D80027' }} points="341.333,119.467 290.133,119.467 290.133,68.267 221.867,68.267 221.867,119.467 170.667,119.467 170.667,187.733 221.867,187.733 221.867,238.933 290.133,238.933 290.133,187.733 341.333,187.733" />
+    <polygon style={{ fill: '#A2001D' }} points="290.133,119.467 290.133,68.267 256,68.267 256,238.933 290.133,238.933 290.133,187.733 341.333,187.733 341.333,119.467" />
+    <rect x="128" y="409.6" style={{ fill: '#5A8BB0' }} width="256" height="102.4" />
+    <rect x="256" y="409.6" style={{ fill: '#3C5D76' }} width="128" height="102.4" />
+    <g>
+      <rect x="332.8" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="230.4" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="119.467" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="17.067" y="307.2" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="17.067" y="409.6" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="435.2" y="409.6" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="435.2" y="307.2" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+    </g>
+  </svg>
+);

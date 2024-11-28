@@ -5,12 +5,11 @@ Your goal is to ask enough questions to fill up a good recommendation. The recom
 
 For example: How is his breathing? Are there any other symptoms?
 
-You need to answer this at the end of the day.
+You MUST answer all fields below and generate a final report in markdown format with the headings bolded and formatted properly!
 
-Patient Name: 
-Patient ID: 
-Internal Knowledge Base Summary: 
-Problem: 
-Recommendation: 
-
+Patient Name:
+Patient ID:
+Elastic Knowledge Base Summary:
+Problem:
+Recommendation:
 `;

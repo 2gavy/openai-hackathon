@@ -5,11 +5,12 @@ import 'react-device-frameset/styles/marvel-devices.min.css'
 interface CallingScreenInIPhoneXProps {
     onButtonClick: () => Promise<void>; // Or `() => void` depending on your implementation
     isRecording: boolean;
+    reportContent: string;
     startRecording?: () => void;
     stopRecording?: () => void;
 }
 
-const CallingScreenInIPhoneX: React.FC<CallingScreenInIPhoneXProps> = ({ onButtonClick, isRecording, startRecording, stopRecording }) => {
+const CallingScreenInIPhoneX: React.FC<CallingScreenInIPhoneXProps> = ({ onButtonClick, isRecording, startRecording, stopRecording, reportContent }) => {
     React.useEffect(() => {
         // Remove the 'notch' class after the component has mounted
         const notchElement = document.querySelector('.notch');
@@ -68,7 +69,11 @@ const CallingScreenInIPhoneX: React.FC<CallingScreenInIPhoneXProps> = ({ onButto
                         />
                         <Button label="Add" icon={AddIcon} />
                         <Button label="End Call" icon={EndIcon} isEnd={true} handleClick={onButtonClick} />
-                        <Button label="Keypad" icon={KeypadIcon} />
+                        <Button
+                            label={reportContent ? 'Send to email' : 'Keypad'}
+                            icon={reportContent ? SendMailIcon : KeypadIcon}
+                        />
+                        {/* <Button label="Keypad" icon={KeypadIcon} /> */}
                     </div>
                 </div>
             </div>
@@ -121,7 +126,7 @@ const FaceTimeIcon = () => (
 );
 
 const PushtotalkIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" fill="#FFFFFF" height="30px" width="30px" version="1.1" viewBox="0 0 512 512" enable-background="new 0 0 512 512">
+    <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" fill="#FFFFFF" height="30px" width="30px" version="1.1" viewBox="0 0 512 512" enableBackground="new 0 0 512 512">
         <g>
             <g>
                 <path d="m439.5,236c0-11.3-9.1-20.4-20.4-20.4s-20.4,9.1-20.4,20.4c0,70-64,126.9-142.7,126.9-78.7,0-142.7-56.9-142.7-126.9 0-11.3-9.1-20.4-20.4-20.4s-20.4,9.1-20.4,20.4c0,86.2 71.5,157.4 163.1,166.7v57.5h-23.6c-11.3,0-20.4,9.1-20.4,20.4 0,11.3 9.1,20.4 20.4,20.4h88c11.3,0 20.4-9.1 20.4-20.4 0-11.3-9.1-20.4-20.4-20.4h-23.6v-57.5c91.6-9.3 163.1-80.5 163.1-166.7z" />
@@ -164,6 +169,33 @@ const KeypadIcon = () => (
         <circle cx="34" cy="51" r="5" fill="white" />
         <circle cx="34" cy="32" r="5" fill="white" />
     </svg>
+);
+
+const SendMailIcon = () => (
+    <svg
+    xmlns="http://www.w3.org/2000/svg"
+    xmlnsXlink="http://www.w3.org/1999/xlink"
+    viewBox="0 0 512 512"
+    width="25"
+    height="25"
+    xmlSpace="preserve"
+  >
+    <polygon style={{ fill: '#E4F1FB' }} points="409.6,238.933 409.6,0 102.4,0 102.4,238.933 25.6,238.933 25.6,512 102.4,512 409.6,512 486.4,512 486.4,238.933" />
+    <polygon style={{ fill: '#C9E3F7' }} points="409.6,238.933 409.6,0 256,0 256,512 486.4,512 486.4,238.933" />
+    <polygon style={{ fill: '#D80027' }} points="341.333,119.467 290.133,119.467 290.133,68.267 221.867,68.267 221.867,119.467 170.667,119.467 170.667,187.733 221.867,187.733 221.867,238.933 290.133,238.933 290.133,187.733 341.333,187.733" />
+    <polygon style={{ fill: '#A2001D' }} points="290.133,119.467 290.133,68.267 256,68.267 256,238.933 290.133,238.933 290.133,187.733 341.333,187.733 341.333,119.467" />
+    <rect x="128" y="409.6" style={{ fill: '#5A8BB0' }} width="256" height="102.4" />
+    <rect x="256" y="409.6" style={{ fill: '#3C5D76' }} width="128" height="102.4" />
+    <g>
+      <rect x="332.8" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="230.4" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="119.467" y="307.2" style={{ fill: '#FFFFFF' }} width="51.2" height="51.2" />
+      <rect x="17.067" y="307.2" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="17.067" y="409.6" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="435.2" y="409.6" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+      <rect x="435.2" y="307.2" style={{ fill: '#FFFFFF' }} width="59.733" height="51.2" />
+    </g>
+  </svg>
 );
 
 export default CallingScreenInIPhoneX;
