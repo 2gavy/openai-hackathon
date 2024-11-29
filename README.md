@@ -1,3 +1,8 @@
+# Demo Video
+[![Watch the video](./public/demo_screenshot.png)](https://youtu.be/k2HyG6rvcoU)
+
+##  Realtime API is still in beta, please take note of the rate limit
+
 # Create a .env
 OPENAI_API_KEY=sk-proj-xxx
 
