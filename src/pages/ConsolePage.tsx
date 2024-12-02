@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 const { OpenAI } = require("openai");
+const { Client } = require('@elastic/elasticsearch');
 
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_medical.js';
@@ -132,8 +133,6 @@ export function ConsolePage() {
   const openai = new OpenAI({
     apiKey: localStorage.getItem('tmp::voice_api_key'), dangerouslyAllowBrowser: true
   });
-
-  const testConversation = useCallback(async () => {  }, []);
 
     /**
    * Connect to conversation:
@@ -444,39 +443,94 @@ export function ConsolePage() {
     client.addTool(
       {
         name: 'enrich_elastic_knowledge_base',
-        description:
-          'Do not generate summary! Enrich with Elastic Knowledge Base',
+        description: 'Enrich with Elastic Knowledge Base using Retrievers API',
         parameters: {
           type: 'object',
           properties: {
             search_term: {
               type: 'string',
-              description: 'Keywords, search terms, criteria to find recommended actions',
+              description: 'Keywords or search query for enrichment'
             }
           },
-          required: ['search_term'],
-        },
+          required: ['search_term']
+        }
       },
       async ({ search_term }: { search_term: string }) => {
-        const searchTerms = search_term.toLowerCase().split(/\s+/);
-        const results = knowledgeBase.filter(item =>
-          searchTerms.some(term => fuzzyWordMatch(term, item))
-        );
-
-        if (results.length === 0) {
-          return "No relevant information found.";
+        // Prepare the search query with both the vector and text matching retrievers
+        const query = {
+          "retriever": {
+            "rrf": {
+              "retrievers": [
+                {
+                  "standard": {
+                    "query": {
+                      "term": {
+                        "overview": search_term
+                      }
+                    }
+                  }
+                },
+                {
+                  "knn": {
+                    "field": "overview_dense",
+                    "query_vector_builder": {
+                      "text_embedding": {
+                        "model_id": ".multilingual-e5-small_linux-x86_64",
+                        "model_text": search_term
+                      }
+                    },
+                    "k": 5,
+                    "num_candidates": 5
+                  }
+                },
+                {
+                  "standard": {
+                    "query": {
+                      "text_expansion": {
+                        "overview_sparse": {
+                          "model_id": ".elser_model_2_linux-x86_64",
+                          "model_text": search_term
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "rank_window_size": 5,
+              "rank_constant": 1
+            }
+          },
+          "size": 3,
+          "fields": [
+            "names",
+            "overview"
+          ],
+          "_source": false
         }
+    
+        try {
+          // Perform the Elasticsearch request using the above query
+          const response = await Client.search({
+            index: 'search-medical',  // Replace with your actual index name
+            body: query
+          });
+    
+          // Handle the response and extract the relevant information
+          const hits = response.hits.hits;
+    
+          if (hits.length === 0) {
+            return "No relevant information found.";
+          }
 
-        // Sort results by relevance (number of matching terms)
-        const scoredResults = results.map(item => ({
-          text: item,
-          score: searchTerms.filter(term => fuzzyWordMatch(term, item)).length
-        }));
+          return hits
 
-        scoredResults.sort((a, b) => b.score - a.score);
-        return scoredResults.map(result => result.text).join('\n');
+        } catch (error) {
+          console.error('Error performing search:', error);
+          return "An error occurred while retrieving the information.";
+        }
       }
     );
+    
 
     client.addTool(
       {
@@ -611,7 +665,7 @@ export function ConsolePage() {
         );
         item.formatted.file = wavFile;
         // console.log(item.formatted.transcript)
-        // console.log(items);
+        console.log(items);
       }
       if (item.formatted.transcript.includes("Patient Name:")) {
         setReportContent(item.formatted.transcript)
